@@ -57,6 +57,36 @@ async function loadSnapshot(): Promise<TournamentSnapshot> {
     standingsByGroup.set(letter, rows);
   }
 
+  // deriveStanding's "top 2 in group = Qualified" is incomplete for this
+  // format: the 2026 World Cup's Round of 32 also includes the 8 best
+  // third-place teams across all 12 groups, so a 3rd-place finisher can
+  // still advance. Re-implementing FIFA's best-third tiebreak rules here
+  // would just add another place to get it wrong — instead, treat actual
+  // appearance in a knockout-stage fixture as direct proof a team advanced,
+  // and any knockout-stage loss as proof they're out. Real match data beats
+  // a recomputed rule every time.
+  const knockoutParticipants = new Set<string>();
+  const eliminatedInKnockouts = new Set<string>();
+  for (const raw of matchesResult.data.matches) {
+    if (raw.stage === "GROUP_STAGE") continue;
+    if (raw.homeTeam?.id != null) knockoutParticipants.add(String(raw.homeTeam.id));
+    if (raw.awayTeam?.id != null) knockoutParticipants.add(String(raw.awayTeam.id));
+
+    if (raw.status !== "FINISHED") continue;
+    if (raw.homeTeam?.id == null || raw.awayTeam?.id == null) continue;
+    if (raw.score.winner === "HOME_TEAM") eliminatedInKnockouts.add(String(raw.awayTeam.id));
+    else if (raw.score.winner === "AWAY_TEAM") eliminatedInKnockouts.add(String(raw.homeTeam.id));
+  }
+  for (const rows of standingsByGroup.values()) {
+    for (const row of rows) {
+      // Order matters: a team can win an early round and lose a later one —
+      // the loss (elimination) always takes priority over the earlier proof
+      // of survival.
+      if (knockoutParticipants.has(row.teamId)) row.status = "Qualified";
+      if (eliminatedInKnockouts.has(row.teamId)) row.status = "Eliminated";
+    }
+  }
+
   const matches = matchesResult.data.matches.map(mapMatch);
 
   // Knockout-stage matches reference teams that may not appear in any group
