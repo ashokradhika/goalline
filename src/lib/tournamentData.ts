@@ -176,6 +176,23 @@ export interface LeaderboardEntry {
   standing: GroupStanding;
 }
 
+/** Teams still alive in the tournament right now — used by the Predictions
+ * tab so a team drops out of the votable list the moment it's eliminated,
+ * without needing any separate sync step. */
+export async function getActiveTeams(): Promise<LeaderboardEntry[]> {
+  const snapshot = await loadSnapshot();
+  const entries: LeaderboardEntry[] = [];
+  for (const rows of snapshot.standingsByGroup.values()) {
+    for (const standing of rows) {
+      if (standing.status === "Eliminated") continue;
+      const team = snapshot.teams.get(standing.teamId);
+      if (team) entries.push({ team, standing });
+    }
+  }
+  entries.sort((a, b) => a.team.name.localeCompare(b.team.name));
+  return entries;
+}
+
 /** Combined table across all groups — GoalLine's stand-in for a "rankings"
  * view, sourced entirely from real group-stage results (not the official
  * FIFA World Ranking, which this API doesn't expose). */
