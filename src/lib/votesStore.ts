@@ -33,17 +33,26 @@ export async function getTallies(): Promise<Record<string, number>> {
   return result;
 }
 
-export async function getVoterPick(voterId: string): Promise<string | null> {
+// Upstash's client auto-deserializes stored values, so a team ID that looks
+// numeric (e.g. "762") comes back as the JS number 762, not the string
+// "762" — silently breaking every `=== teamId` comparison downstream, since
+// team IDs are strings everywhere else in the app. Force back to string at
+// the one place we read it from Redis.
+async function readVoterPick(voterId: string): Promise<string | null> {
   const redis = requireClient();
-  const pick = await redis.get<string>(voterKey(voterId));
-  return pick ?? null;
+  const pick = await redis.get<string | number>(voterKey(voterId));
+  return pick == null ? null : String(pick);
+}
+
+export async function getVoterPick(voterId: string): Promise<string | null> {
+  return readVoterPick(voterId);
 }
 
 /** Casts or changes a vote. Moving your pick decrements your old team and
  * increments the new one, so a single browser only ever counts once. */
 export async function castVote(voterId: string, teamId: string): Promise<void> {
   const redis = requireClient();
-  const previous = await redis.get<string>(voterKey(voterId));
+  const previous = await readVoterPick(voterId);
   if (previous === teamId) return;
 
   const pipeline = redis.pipeline();
