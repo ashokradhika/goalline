@@ -4,6 +4,7 @@ import { getMatchById, getTeam, isDataStale } from "@/lib/tournamentData";
 import { StatusBadge } from "@/components/StatusBadge";
 import { MatchAiSummary } from "@/components/MatchAiSummary";
 import { StaleBanner } from "@/components/StaleBanner";
+import { KickoffTime } from "@/components/KickoffTime";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +21,6 @@ export default async function MatchDetailPage({
     match.homeTeamId ? getTeam(match.homeTeamId) : undefined,
     match.awayTeamId ? getTeam(match.awayTeamId) : undefined,
   ]);
-
-  const kickoffLabel = new Date(match.kickoff).toLocaleString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
 
   const hasHalftime = match.halftimeHomeScore !== null && match.halftimeAwayScore !== null;
 
@@ -73,7 +65,7 @@ export default async function MatchDetailPage({
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-1 text-sm text-muted">
-          <span>{kickoffLabel}</span>
+          <KickoffTime iso={match.kickoff} variant="full" />
         </div>
       </div>
 
@@ -92,7 +84,12 @@ export default async function MatchDetailPage({
             />
           )}
           {match.referee && <Fact label="Referee" value={match.referee} />}
-          <Fact label="Kickoff" value={kickoffLabel} />
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-muted">Kickoff</dt>
+            <dd className="font-medium">
+              <KickoffTime iso={match.kickoff} variant="full" />
+            </dd>
+          </div>
         </dl>
         <p className="mt-4 text-xs text-muted">
           Goal-by-goal event detail isn&apos;t available on our current data plan — scores update

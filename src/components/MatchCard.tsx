@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Match, Team } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FlagChip } from "@/components/FlagChip";
+import { KickoffTime } from "@/components/KickoffTime";
 
 const TBD_TEAM: Team = { id: "tbd", name: "TBD", shortName: "TBD", tla: "TBD", crest: null, group: null };
 
@@ -17,12 +18,6 @@ export function MatchCard({
   const home = homeTeam ?? TBD_TEAM;
   const away = awayTeam ?? TBD_TEAM;
   const isLive = match.status === "live";
-
-  const kickoffLabel = new Date(match.kickoff).toLocaleString(undefined, {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 
   return (
     <Link
@@ -64,7 +59,9 @@ export function MatchCard({
       </div>
 
       {match.status === "upcoming" && (
-        <div className="mt-3 text-right text-xs font-medium text-muted">{kickoffLabel}</div>
+        <div className="mt-3 text-right text-xs font-medium text-muted">
+          <KickoffTime iso={match.kickoff} variant="short" />
+        </div>
       )}
     </Link>
   );
